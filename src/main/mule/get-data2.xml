@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="637535be-6bfd-4b43-9928-04438b0507c5" doc:description="This application is to test how to send two query parameters and get data from the databasees. the database i use is called northwind and the table is Employee and the column names are titleOfCourtesy and city. this returns java output, i transform it to csv and write it to disk. but in order to write the value of the queryparameters to another disk we have to set them to a variable. since our queryParam values are going to change across the flow. so we have to add two set variable immediately after our listener for both titleOfCourtesy and city." >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<db:config name="Database_Config" doc:name="Database Config" doc:id="e20f472b-564c-4a86-80d2-419254ad5448" >
+		<db:my-sql-connection host="localhost" port="3306" user="root" password="Asq@22w0rd#" database="northwind" />
+	</db:config>
+	<file:config name="File_Config" doc:name="File Config" doc:id="47440f7f-88e5-4bc2-a845-cdf02fe2ae4c" >
+		<file:connection workingDir="C:\Mulesoft\datafromdatabasees" />
+	</file:config>
+	<flow name="get-data2Flow" doc:id="b80410b3-d22b-46bf-993c-0871800149cf" >
+		<http:listener doc:name="Listener" doc:id="cd0c29eb-4b7d-4c96-8bfd-c01fd907ebea" doc:description="This application is to test how to send two query parameters and get data from the databasees. the database i use is called northwind and the table is Employee and the column names are titleOfCourtesy and city. this returns java output, i transform it to csv and write it to disk. but in order to write the value of the queryparameters to another disk we have to set them to a variable. since our queryParam values are going to change across the flow. so we have to add two set variable immediately after our listener for both titleOfCourtesy and city." config-ref="HTTP_Listener_config" path="get-data"/>
+		<logger level="INFO" doc:name="Logger" doc:id="21ba9bca-2cef-443b-88ae-f4b8e1b71cc1" message='#["Title Of Courtesy is: " ++ attributes.queryParams.titleOfCourtesy ++" and City is: " ++ attributes.queryParams.city]'/>
+		<set-variable value="#[attributes.queryParams.titleOfCourtesy]" doc:name="Set titleOfCourtesy" doc:id="68b134ea-f410-452e-ab18-699ccdd400f2" variableName="titleOfCourtesy"/>
+		<set-variable value="#[attributes.queryParams.city]" doc:name="Set City" doc:id="e05944d7-8181-4efa-820c-8cca79538955" variableName="city"/>
+		<db:select doc:name="Get data from MySQL" doc:id="b85ba29c-d73d-4da2-9b31-c698c2e42dd2" config-ref="Database_Config">
+			<db:sql ><![CDATA[SELECT * FROM employee where titleOfCourtesy= :titleOfCourtesy and city= :city]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{'titleOfCourtesy': attributes.queryParams.titleOfCourtesy, 
+'city': attributes.queryParams.city
+}]]]></db:input-parameters>
+		</db:select>
+		<ee:transform doc:name="To csv" doc:id="7b080d8f-1394-4927-a151-74006eeb5eea" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/csv
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<file:write doc:name="Write To disk" doc:id="fd3bcad8-acf3-4986-ab8b-409e7c8d67a4" config-ref="File_Config" path='#[vars.titleOfCourtesy ++ "_" ++ vars.city ++ ".csv"]'/>
+	</flow>
+</mule>
